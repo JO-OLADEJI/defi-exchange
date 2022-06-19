@@ -5,15 +5,15 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Exchange is ERC20 {
 
-	address public tastySwapToken;
+	address public beeToken;
 
-	constructor(address _tastySwapToken) ERC20("TastySwap LP", "TLP") {
-		require(_tastySwapToken != address(0), "NULL_TOKEN_ADDRESS");
-		tastySwapToken = _tastySwapToken;
+	constructor(address _beeToken) ERC20("TastySwap LP", "TLP") {
+		require(_beeToken != address(0), "NULL_TOKEN_ADDRESS");
+		beeToken = _beeToken;
 	}
 
 	function getReserve() public view returns(uint256) {
-		return ERC20(tastySwapToken).balanceOf(address(this));
+		return ERC20(beeToken).balanceOf(address(this));
 	}
 
 	function addLiquidity(uint256 _tokenAmount) public payable returns(uint) {
@@ -22,7 +22,7 @@ contract Exchange is ERC20 {
 		uint256 lpTokenShare;
 
 		require(
-			ERC20(tastySwapToken).allowance(msg.sender, address(this)) >= _tokenAmount,
+			ERC20(beeToken).allowance(msg.sender, address(this)) >= _tokenAmount,
 			"INSUFFICIENT_TOKEN_APPROVAL"
 		);
 		require(msg.value > 0, "NO_ETHER_SENT");
@@ -30,7 +30,7 @@ contract Exchange is ERC20 {
 
 		// first liquidity provider sets initial trading price
 		if (getReserve() == 0) {
-			ERC20(tastySwapToken).transferFrom(msg.sender, address(this), _tokenAmount); // set initial ratio based on amount sent when providing liquidity
+			ERC20(beeToken).transferFrom(msg.sender, address(this), _tokenAmount); // set initial ratio based on amount sent when providing liquidity
 
 			lpTokenShare = msg.value;
 			_mint(msg.sender, lpTokenShare); // mint LP tokens to liquidity provider
@@ -39,7 +39,7 @@ contract Exchange is ERC20 {
 			ethRatio = msg.value / (address(this).balance - msg.value);
 			tokenRatio = _tokenAmount / getReserve();
 			require(ethRatio == tokenRatio, "INVALID_TOKEN_RATIO");
-			ERC20(tastySwapToken).transferFrom(msg.sender, address(this), _tokenAmount); // add liquidity based on ratio
+			ERC20(beeToken).transferFrom(msg.sender, address(this), _tokenAmount); // add liquidity based on ratio
 
 			lpTokenShare = ethRatio * totalSupply();
 			_mint(msg.sender, lpTokenShare); // mint LP tokens to liquidity provider
@@ -57,7 +57,7 @@ contract Exchange is ERC20 {
 		uint256 tokenRefund = removalRatio * getReserve();
 
 		_burn(msg.sender, _lpTokenAmount);
-		ERC20(tastySwapToken).transfer(msg.sender, tokenRefund);
+		ERC20(beeToken).transfer(msg.sender, tokenRefund);
 		(bool sent, ) = address(this).call{ value: ethRefund }("");
 		require(sent, "FAILED_TO_SEND_ETHER");
 
@@ -85,7 +85,7 @@ contract Exchange is ERC20 {
 			inputAmountWithFees = (msg.value * 99) / 100; // fee of 1%
 			outputAmount = getAmountOfTokens(inputAmountWithFees, ethReserve, getReserve());
 			require(outputAmount >= _minOutputAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
-			ERC20(tastySwapToken).transfer(msg.sender, outputAmount);
+			ERC20(beeToken).transfer(msg.sender, outputAmount);
 		}
 		else { // assume erc20 token is the input token
 			inputAmountWithFees = (_tokenAmount * 99) / 100; // fee of 1%;

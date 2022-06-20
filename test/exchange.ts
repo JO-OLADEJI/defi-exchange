@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Contract, BigNumber } from "ethers";
@@ -7,7 +8,6 @@ describe("Exchange", () => {
   let Exchange: Contract;
   let Bee: Contract;
   let addr1: SignerWithAddress;
-  // eslint-disable-next-line no-unused-vars
   let addr2: SignerWithAddress;
 
   beforeEach(async () => {
@@ -144,59 +144,94 @@ describe("Exchange", () => {
   //   });
   // });
 
-  describe("removeLiquidity", () => {
-    it("should revert if LP tokens passed is more than LP tokens owned by caller", async () => {
-      const initialErc20Liquidity = 1000;
-      const initialEtherLiquidity = 1;
-      await initialLiquidity(initialEtherLiquidity, initialErc20Liquidity);
+  // describe("removeLiquidity", () => {
+  //   it("should revert if LP tokens passed is more than LP tokens owned by caller", async () => {
+  //     const initialErc20Liquidity = 1000;
+  //     const initialEtherLiquidity = 1;
+  //     await initialLiquidity(initialEtherLiquidity, initialErc20Liquidity);
 
-      await expect(
-        Exchange.removeLiquidity(
-          to18Decimals(initialEtherLiquidity).add(BigNumber.from(1))
-        )
-      ).to.be.revertedWith("INSUFFICIENT_LP_TOKENS");
+  //     await expect(
+  //       Exchange.removeLiquidity(
+  //         to18Decimals(initialEtherLiquidity).add(BigNumber.from(1))
+  //       )
+  //     ).to.be.revertedWith("INSUFFICIENT_LP_TOKENS");
+  //   });
+
+  //   it("should withdraw liquidity to sender's address", async () => {
+  //     const initialErc20Liquidity = 1000;
+  //     const initialEtherLiquidity = 1;
+  //     await initialLiquidity(initialEtherLiquidity, initialErc20Liquidity);
+
+  //     const erc20BalanceBeforeRemoval: BigNumber = await Bee.balanceOf(
+  //       addr1.address
+  //     );
+  //     const lpTokenShareBeforeremoval: BigNumber = await Exchange.balanceOf(
+  //       addr1.address
+  //     );
+
+  //     const totalLpTokensBeforeRemoval: BigNumber =
+  //       await Exchange.totalSupply();
+  //     const lpTokenShareToWithdraw = lpTokenShareBeforeremoval;
+
+  //     // simulate withdrawal to obtain return values
+  //     const withdrawalsValue = await Exchange.callStatic.removeLiquidity(
+  //       lpTokenShareToWithdraw
+  //     );
+  //     // authentic call to the function
+  //     await Exchange.removeLiquidity(lpTokenShareBeforeremoval);
+
+  //     const erc20BalanceAfterRemoval: BigNumber = await Bee.balanceOf(
+  //       addr1.address
+  //     );
+  //     const lpTokenShareAfterRemoval: BigNumber = await Exchange.balanceOf(
+  //       addr1.address
+  //     );
+  //     const totalLpTokensAfterRemoval: BigNumber = await Exchange.totalSupply();
+
+  //     expect(erc20BalanceBeforeRemoval.add(withdrawalsValue[1])).to.equal(
+  //       erc20BalanceAfterRemoval
+  //     );
+  //     expect(totalLpTokensAfterRemoval).to.equal(
+  //       totalLpTokensBeforeRemoval.sub(lpTokenShareBeforeremoval)
+  //     );
+  //     expect(lpTokenShareAfterRemoval).to.equal(
+  //       lpTokenShareBeforeremoval.sub(lpTokenShareToWithdraw)
+  //     );
+  //   });
+  // });
+
+  describe("getAmountOfTokens", () => {
+    it("should revert if input, output or both reserves are zero", async () => {
+      await expect(Exchange.getAmountOfTokens(1, 0, 100)).to.be.revertedWith(
+        "INVALID_RESERVES"
+      );
+      await expect(Exchange.getAmountOfTokens(1, 100, 0)).to.be.revertedWith(
+        "INVALID_RESERVES"
+      );
+      await expect(Exchange.getAmountOfTokens(1, 0, 0)).to.be.revertedWith(
+        "INVALID_RESERVES"
+      );
     });
 
-    it("should withdraw liquidity to sender's address", async () => {
-      const initialErc20Liquidity = 1000;
-      const initialEtherLiquidity = 1;
-      await initialLiquidity(initialEtherLiquidity, initialErc20Liquidity);
+    it("should calculate the output amount that satisfies the formula x * y = K", async () => {
+      const inputAmount = to18Decimals(1);
+      const inputReserve = to18Decimals(10);
+      const outputReserve = to18Decimals(20);
 
-      const erc20BalanceBeforeRemoval: BigNumber = await Bee.balanceOf(
-        addr1.address
-      );
-      const lpTokenShareBeforeremoval: BigNumber = await Exchange.balanceOf(
-        addr1.address
-      );
+      const inputAmountWithFee = inputAmount.mul(BigNumber.from(99)); // 1% fee
+      const numerator = inputAmountWithFee.mul(outputReserve);
+      const denominator = inputReserve
+        .mul(BigNumber.from(100))
+        .add(inputAmountWithFee);
+      const expectedOutput = numerator.div(denominator);
 
-      const totalLpTokensBeforeRemoval: BigNumber =
-        await Exchange.totalSupply();
-      const lpTokenShareToWithdraw = lpTokenShareBeforeremoval;
-
-      // simulate withdrawal to obtain return values
-      const withdrawalsValue = await Exchange.callStatic.removeLiquidity(
-        lpTokenShareToWithdraw
-      );
-      // authentic call to the function
-      await Exchange.removeLiquidity(lpTokenShareBeforeremoval);
-
-      const erc20BalanceAfterRemoval: BigNumber = await Bee.balanceOf(
-        addr1.address
-      );
-      const lpTokenShareAfterRemoval: BigNumber = await Exchange.balanceOf(
-        addr1.address
-      );
-      const totalLpTokensAfterRemoval: BigNumber = await Exchange.totalSupply();
-
-      expect(erc20BalanceBeforeRemoval.add(withdrawalsValue[1])).to.equal(
-        erc20BalanceAfterRemoval
-      );
-      expect(totalLpTokensAfterRemoval).to.equal(
-        totalLpTokensBeforeRemoval.sub(lpTokenShareBeforeremoval)
-      );
-      expect(lpTokenShareAfterRemoval).to.equal(
-        lpTokenShareBeforeremoval.sub(lpTokenShareToWithdraw)
-      );
+      expect(
+        await Exchange.getAmountOfTokens(
+          inputAmount,
+          inputReserve,
+          outputReserve
+        )
+      ).to.equal(expectedOutput);
     });
   });
 });

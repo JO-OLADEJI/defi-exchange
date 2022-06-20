@@ -62,7 +62,7 @@ contract Exchange is ERC20 {
 		_burn(msg.sender, _lpTokenAmount);
 		ERC20(beeToken).transfer(msg.sender, tokenWithdrawal);
 		payable(msg.sender).transfer(ethWithdrawal);
-		// (bool sent, ) = address(this).call{ value: ethWithdrawal }("");
+		// (bool sent, ) = address(this).call{ value: ethWithdrawal }(""); // a better alternative
 		// require(sent, "FAILED_TO_SEND_ETHER");
 	
 		// TODO: add event to emit this information
@@ -75,11 +75,14 @@ contract Exchange is ERC20 {
 		uint256 _outputReserve
 	) public pure returns(uint256) {
 		require(_inputReserve > 0 && _outputReserve > 0, "INVALID_RESERVES");
-		return _outputReserve - ((_inputReserve * _outputReserve) / _inputReserve + _inputAmount);
+		uint256 inputAmountWithFee = _inputAmount * 99; // fee of 1%
+		// (x + Δx) * (y - Δy) = x * y
+		uint256 numerator = inputAmountWithFee * _outputReserve;
+        uint256 denominator = (_inputReserve * 100) + inputAmountWithFee;
+		return numerator / denominator;
 	}
 
 	function swap(uint256 _tokenAmount, uint256 _minOutputAmount) public payable returns(uint256) {
-		uint256 inputAmountWithFees;
 		uint256 outputAmount;
 		uint256 ethReserve;
 
@@ -88,13 +91,11 @@ contract Exchange is ERC20 {
 
 		(, uint256 tokenReserve) = getReserves();
 		if (msg.value > 0) { // assume eth is the input token
-			inputAmountWithFees = (msg.value * 99) / 100; // fee of 1%
-			outputAmount = getAmountOfTokens(inputAmountWithFees, ethReserve, tokenReserve);
+			outputAmount = getAmountOfTokens(msg.value, ethReserve, tokenReserve);
 			require(outputAmount >= _minOutputAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
 			ERC20(beeToken).transfer(msg.sender, outputAmount);
 		}
 		else { // assume erc20 token is the input token
-			inputAmountWithFees = (_tokenAmount * 99) / 100; // fee of 1%;
 			outputAmount = getAmountOfTokens(_tokenAmount, tokenReserve, ethReserve);
 			require(outputAmount >= _minOutputAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
 			(bool sent, ) = address(this).call{ value: outputAmount }("");

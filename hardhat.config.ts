@@ -36,8 +36,8 @@ const config: HardhatUserConfig = {
     ganache: {
       url: "HTTP://127.0.0.1:7545",
       accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [`0x${process.env.PRIVATE_KEY}`]
+        process.env.ADDR1 !== undefined && process.env.ADDR2 !== undefined
+          ? [`0x${process.env.ADDR1}`, `0x${process.env.ADDR2}`]
           : [],
     },
   },

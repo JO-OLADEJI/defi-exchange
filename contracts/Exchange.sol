@@ -12,14 +12,17 @@ contract Exchange is ERC20 {
 		beeToken = _beeToken;
 	}
 
-	function getReserve() public view returns(uint256) {
-		return ERC20(beeToken).balanceOf(address(this));
+	function getReserves() public view returns(uint256, uint256) {
+		return (
+			address(this).balance,
+			ERC20(beeToken).balanceOf(address(this))
+		);
 	}
 
 	function addLiquidity(uint256 _tokenAmount) public payable returns(uint) {
-		uint256 ethRatio;
-		uint256 tokenRatio;
 		uint256 lpTokenShare;
+		uint256 beeTokenAmount;
+		uint256 ethReserve;
 
 		require(
 			ERC20(beeToken).allowance(msg.sender, address(this)) >= _tokenAmount,
@@ -29,22 +32,20 @@ contract Exchange is ERC20 {
 		require(_tokenAmount > 0, "NO_TOKEN_SENT");
 
 		// first liquidity provider sets initial trading price
-		if (getReserve() == 0) {
+		(uint256 balance, uint256 tokenReserve) = getReserves();
+		ethReserve = balance - msg.value;
+		if (tokenReserve == 0) {
 			ERC20(beeToken).transferFrom(msg.sender, address(this), _tokenAmount); // set initial ratio based on amount sent when providing liquidity
-
 			lpTokenShare = msg.value;
-			_mint(msg.sender, lpTokenShare); // mint LP tokens to liquidity provider
 		}
 		else {
-			ethRatio = msg.value / (address(this).balance - msg.value);
-			tokenRatio = _tokenAmount / getReserve();
-			require(ethRatio == tokenRatio, "INVALID_TOKEN_RATIO");
-			ERC20(beeToken).transferFrom(msg.sender, address(this), _tokenAmount); // add liquidity based on ratio
-
-			lpTokenShare = ethRatio * totalSupply();
-			_mint(msg.sender, lpTokenShare); // mint LP tokens to liquidity provider
+			beeTokenAmount = (tokenReserve * msg.value) / ethReserve;
+			require(_tokenAmount >= beeTokenAmount, "INSUFFICIENT_TOKENS_SENT");
+			ERC20(beeToken).transferFrom(msg.sender, address(this), beeTokenAmount); // add liquidity
+			lpTokenShare = (msg.value * totalSupply()) / ethReserve;
 		}
 
+		_mint(msg.sender, lpTokenShare); // mint LP tokens to liquidity provider
 		return lpTokenShare;
 	}
 
@@ -52,9 +53,10 @@ contract Exchange is ERC20 {
 		uint256 removalRatio;
 
 		require(balanceOf(msg.sender) >= _lpTokenAmount, "INSUFFICIENT_LP_TOKENS");
+		(, uint256 tokenReserve) = getReserves();
 		removalRatio = _lpTokenAmount / totalSupply();
 		uint256 ethRefund = removalRatio * address(this).balance;
-		uint256 tokenRefund = removalRatio * getReserve();
+		uint256 tokenRefund = removalRatio * tokenReserve;
 
 		_burn(msg.sender, _lpTokenAmount);
 		ERC20(beeToken).transfer(msg.sender, tokenRefund);
@@ -81,15 +83,16 @@ contract Exchange is ERC20 {
 		require(msg.value > 0 || _tokenAmount > 0, "NULL_INPUT_AMOUNT");
 		ethReserve = address(this).balance - msg.value;
 
+		(, uint256 tokenReserve) = getReserves();
 		if (msg.value > 0) { // assume eth is the input token
 			inputAmountWithFees = (msg.value * 99) / 100; // fee of 1%
-			outputAmount = getAmountOfTokens(inputAmountWithFees, ethReserve, getReserve());
+			outputAmount = getAmountOfTokens(inputAmountWithFees, ethReserve, tokenReserve);
 			require(outputAmount >= _minOutputAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
 			ERC20(beeToken).transfer(msg.sender, outputAmount);
 		}
 		else { // assume erc20 token is the input token
 			inputAmountWithFees = (_tokenAmount * 99) / 100; // fee of 1%;
-			outputAmount = getAmountOfTokens(_tokenAmount, getReserve(), ethReserve);
+			outputAmount = getAmountOfTokens(_tokenAmount, tokenReserve, ethReserve);
 			require(outputAmount >= _minOutputAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
 			(bool sent, ) = address(this).call{ value: outputAmount }("");
 			require(sent, "FAILED_TO_SEND_ETHER");

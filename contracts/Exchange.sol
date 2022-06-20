@@ -46,24 +46,27 @@ contract Exchange is ERC20 {
 		}
 
 		_mint(msg.sender, lpTokenShare); // mint LP tokens to liquidity provider
+
+		// TODO: add event to emit this information
 		return lpTokenShare;
 	}
 
 	function removeLiquidity(uint256 _lpTokenAmount) public returns(uint256, uint256) {
-		uint256 removalRatio;
-
 		require(balanceOf(msg.sender) >= _lpTokenAmount, "INSUFFICIENT_LP_TOKENS");
+		uint256 ethWithdrawal;
+		uint256 tokenWithdrawal;
 		(, uint256 tokenReserve) = getReserves();
-		removalRatio = _lpTokenAmount / totalSupply();
-		uint256 ethRefund = removalRatio * address(this).balance;
-		uint256 tokenRefund = removalRatio * tokenReserve;
 
+		ethWithdrawal = (_lpTokenAmount * address(this).balance) / totalSupply();
+		tokenWithdrawal = (_lpTokenAmount * tokenReserve) / totalSupply();
 		_burn(msg.sender, _lpTokenAmount);
-		ERC20(beeToken).transfer(msg.sender, tokenRefund);
-		(bool sent, ) = address(this).call{ value: ethRefund }("");
-		require(sent, "FAILED_TO_SEND_ETHER");
-
-		return (ethRefund, tokenRefund);
+		ERC20(beeToken).transfer(msg.sender, tokenWithdrawal);
+		payable(msg.sender).transfer(ethWithdrawal);
+		// (bool sent, ) = address(this).call{ value: ethWithdrawal }("");
+		// require(sent, "FAILED_TO_SEND_ETHER");
+	
+		// TODO: add event to emit this information
+		return (ethWithdrawal, tokenWithdrawal);
 	}
 
 	function getAmountOfTokens(
@@ -98,6 +101,7 @@ contract Exchange is ERC20 {
 			require(sent, "FAILED_TO_SEND_ETHER");
 		}
 
+		// TODO: add event to emit this information
 		return outputAmount;
 	}
 

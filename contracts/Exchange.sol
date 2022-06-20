@@ -62,7 +62,9 @@ contract Exchange is ERC20 {
 		_burn(msg.sender, _lpTokenAmount);
 		ERC20(beeToken).transfer(msg.sender, tokenWithdrawal);
 		payable(msg.sender).transfer(ethWithdrawal);
-		// (bool sent, ) = address(this).call{ value: ethWithdrawal }(""); // a better alternative
+
+		// a better alternative but doesn't work on Ganache
+		// (bool sent, ) = address(this).call{ value: ethWithdrawal }("");
 		// require(sent, "FAILED_TO_SEND_ETHER");
 	
 		// TODO: add event to emit this information
@@ -90,16 +92,20 @@ contract Exchange is ERC20 {
 		ethReserve = address(this).balance - msg.value;
 
 		(, uint256 tokenReserve) = getReserves();
-		if (msg.value > 0) { // assume eth is the input token
+		if (msg.value > 0) { // assume eth is the input
 			outputAmount = getAmountOfTokens(msg.value, ethReserve, tokenReserve);
 			require(outputAmount >= _minOutputAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
 			ERC20(beeToken).transfer(msg.sender, outputAmount);
 		}
-		else { // assume erc20 token is the input token
+		else { // take erc20 token is the input
 			outputAmount = getAmountOfTokens(_tokenAmount, tokenReserve, ethReserve);
 			require(outputAmount >= _minOutputAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
-			(bool sent, ) = address(this).call{ value: outputAmount }("");
-			require(sent, "FAILED_TO_SEND_ETHER");
+			ERC20(beeToken).transferFrom(msg.sender, address(this), _tokenAmount);
+			payable(msg.sender).transfer(outputAmount);
+
+			// a better alternative but doesn't work on Ganache
+			// (bool sent, ) = address(this).call{ value: outputAmount }("");
+			// require(sent, "FAILED_TO_SEND_ETHER");
 		}
 
 		// TODO: add event to emit this information

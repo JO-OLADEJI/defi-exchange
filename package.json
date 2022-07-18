@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "mini decentralized exchange for swapping ETH and one token. works like a simplified version of uniswap v1",
   "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test --network hardhat",
+    "deploy-hardhat": "npx hardhat run scripts/deploy.ts --network hardhat",
+    "deploy-rinkeby": "npx hardhat run scripts/deploy.ts --network rinkeby"
+  },
   "author": "analogdev.eth",
   "license": "MIT",
   "private": false,

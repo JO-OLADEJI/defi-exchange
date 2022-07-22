@@ -26,8 +26,8 @@ const config: HardhatUserConfig = {
   solidity: "0.8.4",
   networks: {
     hardhat: {},
-    rinkeby: {
-      url: process.env.RINKEBY_URL || "",
+    fuji: {
+      url: process.env.FUJI_URL || "",
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [`0x${process.env.PRIVATE_KEY}`]
@@ -46,7 +46,7 @@ const config: HardhatUserConfig = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: process.env.SNOWTRACE_API_KEY,
   },
   mocha: {
     timeout: 90000,

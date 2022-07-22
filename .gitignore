@@ -4,9 +4,13 @@ coverage
 coverage.json
 typechain
 
-#Hardhat files
+# Hardhat files
 cache
 artifacts
 
-#custom files
+# The graph protocol
+generated
+build
+
+# Custom files
 playground.ts

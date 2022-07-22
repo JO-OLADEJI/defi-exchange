@@ -1,0 +1,27 @@
+type Liquidity @entity {
+  id: ID!
+  pair: Bytes!
+  ethAmount: BigInt!
+  tokenAmount: BigInt!
+  timestamp: Int!
+}
+
+type Candle @entity {
+  id: ID!
+  period: String!
+  open: BigDecimal!
+  high: BigDecimal!
+  low: BigDecimal!
+  close: BigDecimal!
+  ethVolume: BigInt!
+  tokenVolume: BigInt!
+  lastBlock: Int!
+  openedAt: Int!
+}
+
+type Volume @entity {
+  id: ID!
+  pair: Bytes!
+  volumeInEth: BigInt!
+  timestamp: Int!
+}

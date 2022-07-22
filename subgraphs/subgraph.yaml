@@ -1,0 +1,30 @@
+specVersion: 0.0.4
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Exchange
+    network: fuji
+    source:
+      address: "0xCBa2a9b48Cbc1D4529557E213417DC61cE50adcf"
+      abi: Exchange
+      startBlock: 11833005
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      entities:
+        - Liquidity
+        - Candle
+        - Volume
+      abis:
+        - name: Exchange
+          file: ./abis/Exchange.json
+      eventHandlers:
+        - event: LiquidityAdded(indexed address,indexed address,uint256,uint256)
+          handler: handleLiquidityAdded
+        - event: LiquidityRemoved(indexed address,indexed address,uint256,uint256)
+          handler: handleLiquidityRemoved
+        - event: Swap(indexed address,indexed address,uint256,uint256,uint256,uint256)
+          handler: handleSwap
+      file: ./src/exchange.ts

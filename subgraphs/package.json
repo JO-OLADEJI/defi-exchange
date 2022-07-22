@@ -1,0 +1,16 @@
+{
+  "name": "defi-exchange",
+  "license": "UNLICENSED",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ analogdev-eth/defi-exchange",
+    "create-local": "graph create --node http://localhost:8020/ analogdev-eth/defi-exchange",
+    "remove-local": "graph remove --node http://localhost:8020/ analogdev-eth/defi-exchange",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 analogdev-eth/defi-exchange"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.32.0",
+    "@graphprotocol/graph-ts": "0.27.0"
+  }
+}

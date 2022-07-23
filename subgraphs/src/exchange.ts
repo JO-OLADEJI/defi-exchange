@@ -7,10 +7,26 @@ import {
   Swap,
 } from "../generated/Exchange/Exchange";
 import { Candle, Liquidity, Volume } from "../generated/schema";
-import { getCurrentPeriodTimestamp } from "./utils";
 
 // -> helper function
-function getReserves(address: Address): BigInt[] {
+function getCurrentPeriodTimestamp(timestamp: BigInt, period: String): BigInt {
+  const HOUR_IN_SECONDS = BigInt.fromI32(60 * 60);
+
+  if (period === "H1") {
+    return timestamp.minus(timestamp.mod(HOUR_IN_SECONDS));
+  } else if (period === "H4") {
+    return timestamp.minus(
+      timestamp.mod(HOUR_IN_SECONDS.times(BigInt.fromI32(4)))
+    );
+  } else if (period === "D1") {
+    return timestamp.minus(
+      timestamp.mod(HOUR_IN_SECONDS.times(BigInt.fromI32(24)))
+    );
+  }
+  return BigInt.fromI32(0);
+}
+
+function getReserves(address: Address): Array<BigInt> {
   const pairExchangeContract = Exchange.bind(address);
   const reserves = pairExchangeContract.getReserves();
 
@@ -19,14 +35,17 @@ function getReserves(address: Address): BigInt[] {
 
 function getPrice(pair: Address): BigDecimal {
   const reserves = getReserves(pair);
-  const price: BigDecimal = reserves[0].divDecimal(reserves[1].toBigDecimal());
+  const price = reserves[0].divDecimal(reserves[1].toBigDecimal());
   return price;
 }
 
 // -> event handlers
 export function handleLiquidityAdded(event: LiquidityAdded): void {
   // keeps track of liquidity hourly
-  const liquidityId = getCurrentPeriodTimestamp("H1").toString();
+  const liquidityId = getCurrentPeriodTimestamp(
+    event.block.timestamp,
+    "H1"
+  ).toString();
   const reserves = getReserves(event.params.pair);
   let liquidity = Liquidity.load(liquidityId);
   if (!liquidity) {
@@ -34,7 +53,10 @@ export function handleLiquidityAdded(event: LiquidityAdded): void {
     liquidity.pair = event.params.pair;
     liquidity.ethAmount = reserves[0];
     liquidity.tokenAmount = reserves[1];
-    liquidity.timestamp = getCurrentPeriodTimestamp("H1");
+    liquidity.timestamp = getCurrentPeriodTimestamp(
+      event.block.timestamp,
+      "H1"
+    );
   } else {
     liquidity.ethAmount = liquidity.ethAmount.plus(event.params.ethAmountIn);
     liquidity.tokenAmount = liquidity.tokenAmount.plus(
@@ -47,7 +69,10 @@ export function handleLiquidityAdded(event: LiquidityAdded): void {
 
 export function handleLiquidityRemoved(event: LiquidityRemoved): void {
   // keeps track of liquidity hourly
-  const liquidityId = getCurrentPeriodTimestamp("H1").toString();
+  const liquidityId = getCurrentPeriodTimestamp(
+    event.block.timestamp,
+    "H1"
+  ).toString();
   const reserves = getReserves(event.params.pair);
   let liquidity = Liquidity.load(liquidityId);
   if (!liquidity) {
@@ -55,7 +80,10 @@ export function handleLiquidityRemoved(event: LiquidityRemoved): void {
     liquidity.pair = event.params.pair;
     liquidity.ethAmount = reserves[0];
     liquidity.tokenAmount = reserves[1];
-    liquidity.timestamp = getCurrentPeriodTimestamp("H1");
+    liquidity.timestamp = getCurrentPeriodTimestamp(
+      event.block.timestamp,
+      "H1"
+    );
   } else {
     liquidity.ethAmount = liquidity.ethAmount.minus(event.params.ethAmountOut);
     liquidity.tokenAmount = liquidity.tokenAmount.plus(
@@ -68,12 +96,15 @@ export function handleLiquidityRemoved(event: LiquidityRemoved): void {
 
 export function handleSwap(event: Swap): void {
   // keep track of volume hourly
-  const volumeId = getCurrentPeriodTimestamp("H1").toString();
+  const volumeId = getCurrentPeriodTimestamp(
+    event.block.timestamp,
+    "H1"
+  ).toString();
   let volume = Volume.load(volumeId);
   if (!volume) {
     volume = new Volume(volumeId);
     volume.pair = event.params.pair;
-    volume.timestamp = getCurrentPeriodTimestamp("H1");
+    volume.timestamp = getCurrentPeriodTimestamp(event.block.timestamp, "H1");
     volume.volumeInEth = event.params.ethAmountIn.plus(
       event.params.ethAmountOut
     );
@@ -85,10 +116,13 @@ export function handleSwap(event: Swap): void {
   volume.save();
 
   // keep track of dex-candles
-  const periods: string[] = ["H1", "H4", "D1"];
+  const periods: Array<string> = ["H1", "H4", "D1"];
   const price = getPrice(event.params.pair);
   for (let i = 0; i < periods.length; i++) {
-    const candleId = getCurrentPeriodTimestamp(periods[i]).toString();
+    const candleId = getCurrentPeriodTimestamp(
+      event.block.timestamp,
+      periods[i]
+    ).toString();
     let candle = Candle.load(candleId);
     if (!candle) {
       candle = new Candle(candleId);
@@ -99,7 +133,10 @@ export function handleSwap(event: Swap): void {
       candle.close = price;
       candle.ethVolume = BigInt.fromI32(0);
       candle.tokenVolume = BigInt.fromI32(0);
-      candle.openedAt = getCurrentPeriodTimestamp(periods[i]);
+      candle.openedAt = getCurrentPeriodTimestamp(
+        event.block.timestamp,
+        periods[i]
+      );
     } else {
       if (price > candle.high) {
         candle.high = price;

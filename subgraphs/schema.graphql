@@ -3,7 +3,7 @@ type Liquidity @entity {
   pair: Bytes!
   ethAmount: BigInt!
   tokenAmount: BigInt!
-  timestamp: Int!
+  timestamp: BigInt!
 }
 
 type Candle @entity {
@@ -16,12 +16,12 @@ type Candle @entity {
   ethVolume: BigInt!
   tokenVolume: BigInt!
   lastBlock: Int!
-  openedAt: Int!
+  openedAt: BigInt!
 }
 
 type Volume @entity {
   id: ID!
   pair: Bytes!
   volumeInEth: BigInt!
-  timestamp: Int!
+  timestamp: BigInt!
 }

@@ -1,5 +1,6 @@
 /* eslint-disable node/no-missing-import */
 import { BigInt, Address, BigDecimal } from "@graphprotocol/graph-ts";
+// import { concat } from "@graphprotocol/graph-ts/helper-functions";
 import {
   Exchange,
   LiquidityAdded,
@@ -122,7 +123,9 @@ export function handleSwap(event: Swap): void {
     const candleId = getCurrentPeriodTimestamp(
       event.block.timestamp,
       periods[i]
-    ).toString();
+    )
+      .toString()
+      .concat(periods[i]);
     let candle = Candle.load(candleId);
     if (!candle) {
       candle = new Candle(candleId);
